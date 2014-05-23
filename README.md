@@ -1,7 +1,7 @@
 libnotify ts3plugin
 ===================
 
-Get TeamSpeak3 notifications with libnotify
+Get TeamSpeak3 chat notifications with libnotify.
 
 Build:
 
