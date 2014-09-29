@@ -1,12 +1,17 @@
-libnotify ts3plugin
-===================
+TeamSpeak 3 libnotify plugin
+============================
 
-Get TeamSpeak3 chat and poke notifications with libnotify.
+Get TeamSpeak3 chat and poke notifications for systems using libnotify.
 
-Build:
+**Build:**
 
 	./build.sh
 	cp libnotifyplugin.so /path/to/ts3/plugins/
 
+Building in ubuntu requires the packages libnotify-dev and libgtk2.0-dev
+	
+	sudo apt-get install libnotify-dev libgtk2.0-dev
 
-Enable in Settings->Plugins
+**Enable plugin**
+
+In TeamSpeak3, go to Settings->Plugins and select the Lib-Notify plugin.
