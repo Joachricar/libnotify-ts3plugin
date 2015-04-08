@@ -23,6 +23,7 @@
 
 static struct TS3Functions ts3Functions;
 NotifyNotification* notification;
+const char* message_icon = "emblem-mail";
 
 #ifdef _WIN32
 #define _strcpy(dest, destSize, src) strcpy_s(dest, destSize, src)
@@ -127,7 +128,7 @@ int ts3plugin_init() {
 	printf("PLUGIN: App path: %s\nResources path: %s\nConfig path: %s\nPlugin path: %s\n", appPath, resourcesPath, configPath, pluginPath);
 	
 	if (notify_init("libnotify-ts3plugin")) {
-		notification = notify_notification_new("Libnotify ts3plugin", "init", "./libnotify/ts3-icon.png");
+		notification = notify_notification_new("Libnotify ts3plugin", "init", message_icon);
 		notify_notification_set_timeout(notification, NOTIFICATION_DURATION);
 	}
 	else {
@@ -183,7 +184,7 @@ int ts3plugin_onTextMessageEvent(uint64 serverConnectionHandlerID, anyID targetM
 }
 
 void send_notification(uint64 serverConnectionHandlerID, const char* event_name, const char* message) {
-	notify_notification_update(notification, event_name, message, "./libnotify/ts3-icon.png");
+	notify_notification_update(notification, event_name, message, message_icon);
 	if(!notify_notification_show(notification, NULL)) {
 		ts3Functions.logMessage("libnotify error", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
 	} else {
