@@ -1,3 +1,4 @@
 cp.sh
 *.o
 *.so
+bin/

@@ -18,7 +18,8 @@ extern "C" {
 #endif
 
 /* libnotifyplugin */
-int NOTIFICATION_DURATION=1500;//milliseconds
+int NOTIFICATION_DURATION=500;//milliseconds
+
 PLUGINS_EXPORTDLL void send_notification(uint64 serverConnectionHandlerID, const char* event_name, const char* message);
 
 /* Required functions */

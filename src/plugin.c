@@ -22,6 +22,7 @@
 #include <libnotify/notify.h>
 
 static struct TS3Functions ts3Functions;
+NotifyNotification* notification;
 
 #ifdef _WIN32
 #define _strcpy(dest, destSize, src) strcpy_s(dest, destSize, src)
@@ -124,17 +125,30 @@ int ts3plugin_init() {
 	ts3Functions.getPluginPath(pluginPath, PATH_BUFSIZE);
 
 	printf("PLUGIN: App path: %s\nResources path: %s\nConfig path: %s\nPlugin path: %s\n", appPath, resourcesPath, configPath, pluginPath);
+	
+	if (notify_init("libnotify-ts3plugin")) {
+		notification = notify_notification_new("Libnotify ts3plugin", "init", "./libnotify/ts3-icon.png");
+		notify_notification_set_timeout(notification, NOTIFICATION_DURATION);
+	}
+	else {
+		printf("Could not init libnotify");
+	}
+
 
     return 0;  /* 0 = success, 1 = failure, -2 = failure but client will not show a "failed to load" warning */
 	/* -2 is a very special case and should only be used if a plugin displays a dialog (e.g. overlay) asking the user to disable
 	 * the plugin again, avoiding the show another dialog by the client telling the user the plugin failed to load.
 	 * For normal case, if a plugin really failed to load because of an error, the correct return value is 1. */
+
+
 }
 
 /* Custom code called right before the plugin is unloaded */
 void ts3plugin_shutdown() {
     /* Your plugin cleanup code here */
     printf("PLUGIN: shutdown\n");
+	g_object_unref(G_OBJECT(notification));
+	notify_uninit();
 
 	/*
 	 * Note:
@@ -156,99 +170,6 @@ void ts3plugin_shutdown() {
  */
 
 /* Clientlib */
-
-void ts3plugin_onConnectStatusChangeEvent(uint64 serverConnectionHandlerID, int newStatus, unsigned int errorNumber) {
-    /* Some example code following to show how to use the information query functions. */
-
-    if(newStatus == STATUS_CONNECTION_ESTABLISHED) {  /* connection established and we have client and channels available */
-        char* s;
-        char msg[1024];
-        anyID myID;
-        uint64* ids;
-        size_t i;
-		unsigned int error;
-
-        /* Print clientlib version */
-        if(ts3Functions.getClientLibVersion(&s) == ERROR_ok) {
-            printf("PLUGIN: Client lib version: %s\n", s);
-            ts3Functions.freeMemory(s);  /* Release string */
-        } else {
-            ts3Functions.logMessage("Error querying client lib version", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-            return;
-        }
-
-		/* Write plugin name and version to log */
-        snprintf(msg, sizeof(msg), "Plugin %s, Version %s, Author: %s", ts3plugin_name(), ts3plugin_version(), ts3plugin_author());
-        ts3Functions.logMessage(msg, LogLevel_INFO, "Plugin", serverConnectionHandlerID);
-
-        /* Print virtual server name */
-        if((error = ts3Functions.getServerVariableAsString(serverConnectionHandlerID, VIRTUALSERVER_NAME, &s)) != ERROR_ok) {
-			if(error != ERROR_not_connected) {  /* Don't spam error in this case (failed to connect) */
-				ts3Functions.logMessage("Error querying server name", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-			}
-            return;
-        }
-        printf("PLUGIN: Server name: %s\n", s);
-        ts3Functions.freeMemory(s);
-
-        /* Print virtual server welcome message */
-        if(ts3Functions.getServerVariableAsString(serverConnectionHandlerID, VIRTUALSERVER_WELCOMEMESSAGE, &s) != ERROR_ok) {
-            ts3Functions.logMessage("Error querying server welcome message", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-            return;
-        }
-        printf("PLUGIN: Server welcome message: %s\n", s);
-        ts3Functions.freeMemory(s);  /* Release string */
-
-        /* Print own client ID and nickname on this server */
-        if(ts3Functions.getClientID(serverConnectionHandlerID, &myID) != ERROR_ok) {
-            ts3Functions.logMessage("Error querying client ID", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-            return;
-        }
-        if(ts3Functions.getClientSelfVariableAsString(serverConnectionHandlerID, CLIENT_NICKNAME, &s) != ERROR_ok) {
-            ts3Functions.logMessage("Error querying client nickname", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-            return;
-        }
-        printf("PLUGIN: My client ID = %d, nickname = %s\n", myID, s);
-        ts3Functions.freeMemory(s);
-
-        /* Print list of all channels on this server */
-        if(ts3Functions.getChannelList(serverConnectionHandlerID, &ids) != ERROR_ok) {
-            ts3Functions.logMessage("Error getting channel list", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-            return;
-        }
-        printf("PLUGIN: Available channels:\n");
-        for(i=0; ids[i]; i++) {
-            /* Query channel name */
-            if(ts3Functions.getChannelVariableAsString(serverConnectionHandlerID, ids[i], CHANNEL_NAME, &s) != ERROR_ok) {
-                ts3Functions.logMessage("Error querying channel name", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-                return;
-            }
-            printf("PLUGIN: Channel ID = %llu, name = %s\n", (long long unsigned int)ids[i], s);
-            ts3Functions.freeMemory(s);
-        }
-        ts3Functions.freeMemory(ids);  /* Release array */
-
-        /* Print list of existing server connection handlers */
-        printf("PLUGIN: Existing server connection handlers:\n");
-        if(ts3Functions.getServerConnectionHandlerList(&ids) != ERROR_ok) {
-            ts3Functions.logMessage("Error getting server list", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-            return;
-        }
-        for(i=0; ids[i]; i++) {
-            if((error = ts3Functions.getServerVariableAsString(ids[i], VIRTUALSERVER_NAME, &s)) != ERROR_ok) {
-				if(error != ERROR_not_connected) {  /* Don't spam error in this case (failed to connect) */
-					ts3Functions.logMessage("Error querying server name", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-				}
-                continue;
-            }
-            printf("- %llu - %s\n", (long long unsigned int)ids[i], s);
-            ts3Functions.freeMemory(s);
-        }
-        ts3Functions.freeMemory(ids);
-    }
-}
-
-
 int ts3plugin_onTextMessageEvent(uint64 serverConnectionHandlerID, anyID targetMode, anyID toID, anyID fromID, const char* fromName, const char* fromUniqueIdentifier, const char* message, int ffIgnored) {
     printf("PLUGIN: onTextMessageEvent %llu %d %d %s %s %d\n", (long long unsigned int)serverConnectionHandlerID, targetMode, fromID, fromName, message, ffIgnored);
 
@@ -257,37 +178,17 @@ int ts3plugin_onTextMessageEvent(uint64 serverConnectionHandlerID, anyID targetM
 		return 0; /* Client will ignore the message anyways, so return value here doesn't matter */
 	}
 
-#if 0
-	{
-		/* Example code: Autoreply to sender */
-		/* Disabled because quite annoying, but should give you some ideas what is possible here */
-		/* Careful, when two clients use this, they will get banned quickly... */
-		anyID myID;
-		if(ts3Functions.getClientID(serverConnectionHandlerID, &myID) != ERROR_ok) {
-			ts3Functions.logMessage("Error querying own client id", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-			return 0;
-		}
-		if(fromID != myID) {  /* Don't reply when source is own client */
-			if(ts3Functions.requestSendPrivateTextMsg(serverConnectionHandlerID, "Text message back!", fromID, NULL) != ERROR_ok) {
-				ts3Functions.logMessage("Error requesting send text message", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
-			}
-		}
-	}
-#endif
-
 	send_notification(serverConnectionHandlerID, fromName, message);
     return 0;  /* 0 = handle normally, 1 = client will ignore the text message */
 }
 
 void send_notification(uint64 serverConnectionHandlerID, const char* event_name, const char* message) {
-	notify_init(event_name);
-	NotifyNotification * notification = notify_notification_new(event_name, message, "dialog-information");
-	notify_notification_set_timeout(notification, NOTIFICATION_DURATION);
+	notify_notification_update(notification, event_name, message, "./libnotify/ts3-icon.png");
 	if(!notify_notification_show(notification, NULL)) {
 		ts3Functions.logMessage("libnotify error", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
+	} else {
+		printf("Could not send libnotify notification");
 	}
-	
-	g_object_unref(G_OBJECT(notification));
 }
 
 int ts3plugin_onClientPokeEvent(uint64 serverConnectionHandlerID, anyID fromClientID, const char* pokerName, const char* pokerUniqueIdentity, const char* message, int ffIgnored) {
@@ -310,9 +211,6 @@ int ts3plugin_onClientPokeEvent(uint64 serverConnectionHandlerID, anyID fromClie
             ts3Functions.logMessage("Error requesting send text message", LogLevel_ERROR, "Plugin", serverConnectionHandlerID);
         }
     }
-
-
-	
 	send_notification(serverConnectionHandlerID, pokerName, message);
 
     return 0;  /* 0 = handle normally, 1 = client will ignore the poke */
