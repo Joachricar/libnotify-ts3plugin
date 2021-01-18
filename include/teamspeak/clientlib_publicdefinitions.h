@@ -15,4 +15,11 @@ enum ConnectStatus {
 	STATUS_CONNECTION_ESTABLISHED, //we are CONNECTED and we have the client and channels available
 };
 
+enum LocalTestMode {
+    TEST_MODE_OFF = 0,
+    TEST_MODE_VOICE_LOCAL_ONLY,
+    TEST_MODE_VOICE_LOCAL_AND_REMOTE,
+    TEST_MODE_TALK_STATUS_CHANGES_ONLY
+};
+
 #endif //CLIENTLIB_PUBLICDEFINITIONS_H
